@@ -13,7 +13,7 @@ import xraylib
 import xraylib_np
 from llvmlite.binding import load_library_permanently
 from numba import errors, extending, types
-from numpy import byte, zeros
+from numpy import byte, frombuffer, int8, zeros
 from numpy.typing import NDArray
 
 from .config import config
@@ -180,8 +180,7 @@ def indices(*args: types.Array) -> list[tuple[None | EllipsisType, ...]]:
     ]
 
 
-@extending.register_jitable
-def convert_str(s: str) -> NDArray[byte]:
+def convert_str(s: str) -> NDArray[int8]:
     """Convert a string to a zero terminated byte array.
 
     Parameters
@@ -191,18 +190,33 @@ def convert_str(s: str) -> NDArray[byte]:
 
     Returns
     -------
-    NDArray[byte]
+    NDArray[int8]
         byte array terminated by 0.
 
     """
-    len_s = len(s)
-    out = zeros(len(s) + 1, dtype=byte)
-    for i in range(len_s):
-        out[i] = ord(s[i])
-    return out
+    raise NotImplementedError
 
 
-def overload_xrl(fcn: Callable) -> None:
+@extending.overload(convert_str)
+def convert_str_overload(s):
+    match s:
+        case types.UnicodeType():
+            def impl_unicode(s):
+                len_s = len(s)
+                out = zeros(len_s + 1, dtype=int8)
+                for i in range(len_s):
+                    out[i] = ord(s[i])
+                return out
+            return impl_unicode
+        case types.Bytes():
+            def impl_bytes(s):
+                out = zeros(len(s) + 1, dtype=int8)
+                out[:-1] = frombuffer(s, dtype=int8)
+                return out
+            return impl_bytes
+
+
+def overload_xrl(fcn: Callable) -> Callable:
     """Overload a function in the xraylib namespace.
 
     Parameters
@@ -213,7 +227,7 @@ def overload_xrl(fcn: Callable) -> None:
         underscore prefixed.
 
     """
-    fname = fcn.__name__.removeprefix("_")
+    fname = getattr(fcn, "__name__").removeprefix("_")
     jit_options = config.xrl.get(fname, {})
 
     _xrl_fcn = getattr(_xraylib, fname)
@@ -223,9 +237,11 @@ def overload_xrl(fcn: Callable) -> None:
     xrl_fcn = getattr(xraylib, fname)
     extending.overload(xrl_fcn, jit_options)(fcn)
     extending.register_jitable(xrl_fcn)
+    
+    return fcn
 
 
-def overload_xrl_np(fcn: Callable) -> None:
+def overload_xrl_np(fcn: Callable) -> Callable:
     """Overload a function in the xraylib_np namespace.
 
     Parameters
@@ -236,6 +252,8 @@ def overload_xrl_np(fcn: Callable) -> None:
         underscore prefixed and "_np" suffixed.
 
     """
-    fname = fcn.__name__.removeprefix("_").removesuffix("_np")
+    fname = getattr(fcn, "__name__").removeprefix("_").removesuffix("_np")
     jit_options = config.xrl_np.get(fname, {})
     extending.overload(getattr(xraylib_np, fname), jit_options)(fcn)
+    
+    return fcn
