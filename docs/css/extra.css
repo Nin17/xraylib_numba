@@ -1,7 +1,23 @@
+/* https://github.com/squidfunk/mkdocs-material/discussions/3530 */
+.md-typeset__table {
+  width: 100%;
+}
+
+.md-typeset__table table:not([class]) {
+  display: table
+}
+
 :root  > * {
   --md-primary-fg-color:        #785EF0;
   --md-primary-fg-color--light: #785EF0;
   --md-primary-fg-color--dark:  #785EF0;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 210;
+  --md-primary-fg-color:        #785EF0;
+  /* --md-primary-fg-color--light: #785EF0;
+  --md-primary-fg-color--dark:  #785EF0; */
 }
 
 /* Center Markdown Tables (requires md_in_html extension) */
@@ -13,3 +29,31 @@
     /* Reset alignment for table cells */
     text-align: initial;
 }
+
+/* https://www.ibm.com/design/language/color/ */
+:root {
+  --color-alert-60: #da1e28;
+  --color-alert-50: #24a148;
+  --color-alert-40: #ff832b;
+  --color-alert-30: #f1c21b;
+}
+.alert-60 {
+  color: var(--color-alert-60);
+}
+.alert-50 {
+  color: var(--color-alert-50);
+}
+.alert-40 {
+  color: var(--color-alert-40);
+}
+.alert-30 {
+  color: var(--color-alert-30);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-width: 0;
+  border-left-width: 0;
+  /* width: fit-content; */
+}
+
